@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graphs, Traversals and Topological Sort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E6EAED; --paper-2:#F3F6F8; --slab:#FFFFFF;
+  --ink:#16232E; --ink-2:#5C6E7C; --ink-3:#8A9BA6; --rule:#C3CDD4;
+  --seen:#0B6E63; --seen-bg:#DCEDEA;
+  --now:#B01B5E; --now-bg:#F9E0EB;
+  --wait:#8A4B00; --wait-bg:#FBEBD8;
+  --sans:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto;padding:28px 20px 80px}
+
+header.hero{margin-bottom:26px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--now);font-weight:500;margin:0 0 12px}
+h1{font-size:clamp(30px,7vw,46px);font-weight:700;letter-spacing:-.025em;line-height:1.05;margin:0 0 14px}
+.lede{margin:0 0 20px;color:var(--ink-2);max-width:60ch;font-size:17px}
+.byline{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:14px 0;font-size:14px;color:var(--ink-2)}
+.byline b{color:var(--ink);font-weight:500}
+
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 30px}
+nav.toc a{font-size:13px;padding:6px 12px;border:1px solid var(--rule);border-radius:20px;color:var(--ink-2);text-decoration:none}
+nav.toc a:hover{border-color:var(--ink);color:var(--ink)}
+
+section{margin-bottom:44px;scroll-margin-top:16px}
+h2{font-size:clamp(22px,5vw,29px);font-weight:700;letter-spacing:-.02em;margin:0 0 6px;line-height:1.2}
+h2 .num{font-family:var(--mono);font-size:15px;color:var(--now);display:block;font-weight:400;letter-spacing:0}
+h3{font-size:18px;font-weight:500;margin:26px 0 10px}
+h4{font-size:15px;font-weight:500;margin:20px 0 8px;color:var(--ink-2)}
+p{margin:0 0 14px}
+.sub{color:var(--ink-2);margin-bottom:20px}
+
+.panel{background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;padding:20px;margin:18px 0}
+.panel.tight{padding:16px}
+.panel h4:first-child{margin-top:0}
+.label{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);margin:0 0 12px;font-weight:500}
+
+.def{border-left:3px solid var(--now);padding:4px 0 4px 16px;margin:18px 0}
+.def b{font-weight:500}
+.callout{background:var(--wait-bg);border:1px solid #E6C79C;border-radius:10px;padding:16px 18px;margin:18px 0;font-size:15px}
+.callout b{font-weight:500}
+
+dl.terms{margin:0}
+dl.terms>div{padding:12px 0;border-bottom:1px solid var(--rule)}
+dl.terms>div:last-child{border-bottom:0}
+dl.terms dt{font-weight:500;font-size:15.5px}
+dl.terms dd{margin:3px 0 0;color:var(--ink-2);font-size:15px}
+dl.terms code,p code,li code,td code,dd code{font-family:var(--mono);font-size:.92em;color:var(--ink)}
+
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:14px 0}
+th,td{text-align:left;padding:10px 12px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:500;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+td.big{font-family:var(--mono);color:var(--ink)}
+.scrollx{overflow-x:auto}
+
+pre{font-family:var(--mono);font-size:13.5px;line-height:1.7;background:var(--slab);border:1px solid var(--rule);border-radius:9px;padding:16px;overflow-x:auto;margin:14px 0}
+pre .c{color:var(--ink-3)}
+
+svg.graph{display:block;width:100%;height:auto;background:var(--slab);border:1px solid var(--rule);border-radius:10px}
+.nlab{font-family:var(--sans);font-size:15px;font-weight:500}
+.elab{font-family:var(--mono);font-size:11px;fill:var(--ink-2)}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:13px;color:var(--ink-2)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid var(--rule)}
+.lg-u{background:var(--slab)} .lg-w{background:var(--wait-bg);border-color:var(--wait)}
+.lg-n{background:var(--now);border-color:var(--now)} .lg-s{background:var(--seen-bg);border-color:var(--seen)}
+
+.controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:16px}
+button{font-family:var(--sans);font-size:14.5px;font-weight:500;padding:9px 16px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--paper-2);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+button.ghost:hover:not(:disabled){border-color:var(--ink)}
+button:disabled{opacity:.34;cursor:default}
+button:focus-visible,select:focus-visible,a:focus-visible,.qa:focus-visible{outline:2px solid var(--now);outline-offset:2px}
+select{font-family:var(--mono);font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid var(--rule);background:var(--slab);color:var(--ink)}
+.counter{font-family:var(--mono);font-size:13px;color:var(--ink-2);margin-left:auto}
+.pickrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--ink-2);margin-bottom:14px}
+
+.lab{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:760px){.lab{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}}
+
+.track{display:flex;gap:6px;flex-wrap:wrap;min-height:44px;align-items:flex-start}
+.tok{font-family:var(--mono);font-size:15px;padding:7px 12px;background:var(--slab);border:1px solid var(--rule);border-radius:7px}
+.tok.hl{border-color:var(--seen);background:var(--seen-bg);color:var(--seen)}
+.tok.wait{border-color:var(--wait);background:var(--wait-bg);color:var(--wait)}
+.tok.top{border-color:var(--now);background:var(--now-bg);color:var(--now)}
+.tok .mini{font-family:var(--sans);font-size:10px;display:block;line-height:1;margin-top:3px;opacity:.75}
+.none{font-size:13.5px;color:var(--ink-3);padding:9px 0}
+.note{font-size:15px;line-height:1.6;margin:0;min-height:72px}
+.note b{font-weight:500;color:var(--now)}
+
+.matrix{border-collapse:collapse;font-family:var(--mono);font-size:13px;margin:0}
+.matrix th,.matrix td{border:1px solid var(--rule);padding:7px 9px;text-align:center;width:34px;color:var(--ink-2)}
+.matrix th{background:var(--paper);color:var(--ink);font-weight:500;font-size:13px;text-transform:none;letter-spacing:0}
+.matrix td.one{background:var(--seen-bg);color:var(--seen);font-weight:500;cursor:pointer}
+.matrix td.one.lit{background:var(--now);color:#fff}
+.adjlist{font-family:var(--mono);font-size:14px;line-height:2}
+.adjlist .k{color:var(--now)}
+
+.qlist{margin:0;padding:0;list-style:none}
+.qlist li{border-bottom:1px solid var(--rule);padding:14px 0}
+.qlist li:last-child{border-bottom:0}
+.q{font-weight:500;margin:0 0 8px}
+.qa{font-size:13px;padding:5px 12px;border:1px solid var(--rule);border-radius:16px;background:transparent;color:var(--ink-2);cursor:pointer;font-family:var(--sans)}
+.ans{margin:10px 0 0;color:var(--ink-2);font-size:15px;border-left:2px solid var(--seen);padding-left:12px}
+.ans[hidden]{display:none}
+
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:16px 0}
+.mini-card{background:var(--slab);border:1px solid var(--rule);border-radius:10px;padding:12px}
+.mini-card h5{margin:10px 0 2px;font-size:14.5px;font-weight:500}
+.mini-card p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.5}
+.mini-card svg{display:block;width:100%;height:auto}
+
+footer{border-top:1px solid var(--rule);padding-top:20px;margin-top:20px;font-size:13.5px;color:var(--ink-2)}
+footer b{color:var(--ink);font-weight:500}
+@media(prefers-reduced-motion:no-preference){
+  .node-c,.tok{transition:fill .2s ease,stroke .2s ease,background .2s ease,border-color .2s ease}
+}
+@media print{nav.toc,.controls,.pickrow{display:none}body{background:#fff}.panel{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <p class="eyebrow">Data Structures &middot; Module on Non-linear Structures</p>
+  <h1>Graphs, Traversals and Topological Sort</h1>
+  <p class="lede">Definitions, representations, DFS, BFS and topological ordering &mdash; each one with a step-by-step visual you can drive yourself, and a complexity estimate you can justify in an exam.</p>
+  <div class="byline">
+    <b>Sree S Bhagya</b> &nbsp;&middot;&nbsp; Assistant Professor &nbsp;&middot;&nbsp; Centre for Artificial Intelligence<br>
+    TKM College of Engineering
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#s1">1. What is a graph</a>
+  <a href="#s2">2. Terminology</a>
+  <a href="#s3">3. Types</a>
+  <a href="#s4">4. Representation</a>
+  <a href="#s5">5. DFS</a>
+  <a href="#s6">6. BFS</a>
+  <a href="#s7">7. Topological sort</a>
+  <a href="#s8">8. Complexity</a>
+  <a href="#s9">9. Self-check</a>
+</nav>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="num">01</span>What is a graph</h2>
+  <p class="sub">Arrays and linked lists are linear. Trees branch, but every node has exactly one parent. A graph drops both restrictions.</p>
+
+  <div class="def">
+    <b>Definition.</b> A graph <code>G = (V, E)</code> is a pair, where <code>V</code> is a finite non-empty set of <b>vertices</b> (also called nodes) and <code>E</code> is a set of <b>edges</b>. Each edge is a pair of vertices <code>(u, v)</code> with <code>u, v &isin; V</code>.
+  </div>
+
+  <p>If the pair is <b>unordered</b>, the edge has no direction and the graph is <b>undirected</b>: <code>(u,v)</code> and <code>(v,u)</code> mean the same edge. If the pair is <b>ordered</b>, the edge runs one way and the graph is <b>directed</b> (a <i>digraph</i>): <code>(u,v)</code> means <code>u &rarr; v</code> only.</p>
+
+  <p>Two size symbols are used throughout this page and in every complexity result below:</p>
+  <table>
+    <tr><th>Symbol</th><th>Meaning</th><th>Range</th></tr>
+    <tr><td class="big">V</td><td>number of vertices</td><td>&mdash;</td></tr>
+    <tr><td class="big">E</td><td>number of edges</td><td>0 &le; E &le; V(V&minus;1)/2 undirected, &le; V(V&minus;1) directed</td></tr>
+  </table>
+
+  <p>That upper bound on <code>E</code> is the reason two different representations exist. When <code>E</code> is close to <code>V&sup2;</code> the graph is called <b>dense</b>; when <code>E</code> is closer to <code>V</code> it is <b>sparse</b>. Almost every real graph &mdash; road networks, social graphs, course prerequisites &mdash; is sparse.</p>
+
+  <h3>Where graphs show up</h3>
+  <table>
+    <tr><th>Application</th><th>Vertex</th><th>Edge</th></tr>
+    <tr><td>Road map</td><td>junction</td><td>road between two junctions</td></tr>
+    <tr><td>Social network</td><td>person</td><td>friendship (undirected) or follow (directed)</td></tr>
+    <tr><td>Web</td><td>page</td><td>hyperlink (directed)</td></tr>
+    <tr><td>Course plan</td><td>subject</td><td>prerequisite (directed, acyclic)</td></tr>
+    <tr><td>Compiler</td><td>task</td><td>dependency</td></tr>
+  </table>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="num">02</span>Terminology</h2>
+  <p class="sub">These words appear in every question on this topic. The reference graph below is used for all the examples.</p>
+
+  <div class="panel">
+    <p class="label">Reference graph &mdash; undirected, V = 6, E = 6</p>
+    <svg class="graph" id="refGraph" viewBox="0 0 440 300" role="img" aria-label="Undirected graph with vertices A to F and six edges"></svg>
+  </div>
+
+  <dl class="terms">
+    <div><dt>Adjacent (neighbour)</dt><dd>Two vertices joined by an edge. <code>A</code> and <code>B</code> are adjacent; <code>A</code> and <code>D</code> are not.</dd></div>
+    <div><dt>Incident</dt><dd>An edge is incident on the two vertices it joins. Edge <code>A&ndash;B</code> is incident on <code>A</code> and on <code>B</code>.</dd></div>
+    <div><dt>Degree &mdash; deg(v)</dt><dd>Number of edges incident on <code>v</code>. Here deg(A) = 2, deg(B) = 3, deg(D) = 1. In any undirected graph the degrees sum to <code>2E</code>, because each edge is counted at both of its ends.</dd></div>
+    <div><dt>In-degree and out-degree</dt><dd>For a directed graph only. In-degree counts arrows arriving at <code>v</code>; out-degree counts arrows leaving. A vertex with in-degree 0 is a <b>source</b>; out-degree 0 makes it a <b>sink</b>.</dd></div>
+    <div><dt>Path</dt><dd>A sequence of vertices where each consecutive pair is joined by an edge, for example <code>A &ndash; B &ndash; E &ndash; F</code>. Its <b>length</b> is the number of edges, here 3.</dd></div>
+    <div><dt>Simple path</dt><dd>A path with no repeated vertex.</dd></div>
+    <div><dt>Cycle</dt><dd>A path of length &ge; 1 that starts and ends at the same vertex, with no other repeats. <code>A &ndash; B &ndash; E &ndash; F &ndash; C &ndash; A</code> is a cycle. A graph with no cycle is <b>acyclic</b>.</dd></div>
+    <div><dt>Connected</dt><dd>An undirected graph is connected if a path exists between every pair of vertices. If not, it splits into <b>connected components</b>.</dd></div>
+    <div><dt>Strongly connected</dt><dd>A directed graph where a directed path exists from every vertex to every other vertex. Weaker than it sounds: direction matters, so a digraph can look connected on paper and still fail this.</dd></div>
+    <div><dt>Subgraph</dt><dd>A graph whose vertices and edges are all drawn from another graph.</dd></div>
+    <div><dt>Complete graph &mdash; K<sub>n</sub></dt><dd>Every pair of distinct vertices is joined. It has <code>n(n&minus;1)/2</code> edges, the maximum possible.</dd></div>
+    <div><dt>Weighted graph</dt><dd>Each edge carries a numeric cost, distance or capacity. Needed by shortest-path algorithms; plain DFS and BFS ignore weights entirely.</dd></div>
+    <div><dt>Self-loop and parallel edges</dt><dd>An edge from a vertex to itself, and two edges joining the same pair. A graph with neither is called <b>simple</b>, which is what is assumed here.</dd></div>
+  </dl>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="num">03</span>Types of graphs</h2>
+  <p class="sub">Four distinctions cover almost every exam question.</p>
+  <div class="grid4" id="typeGallery"></div>
+  <div class="callout">
+    <b>DAG &mdash; directed acyclic graph.</b> A digraph with no directed cycle. This is the only kind of graph on which a topological sort exists, and section 7 depends on it. Every tree is a DAG; not every DAG is a tree, because a DAG vertex may have several parents.
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="num">04</span>Representation of graphs</h2>
+  <p class="sub">A graph is an abstract object. Before any algorithm can run, it must be stored. There are two standard structures, and the choice between them is a space-versus-lookup trade.</p>
+
+  <div class="panel">
+    <div class="pickrow">
+      <label for="repPick">Graph:</label>
+      <select id="repPick">
+        <option value="undirected">Undirected &mdash; 6 vertices, 6 edges</option>
+        <option value="dag">Directed &mdash; 6 vertices, 6 edges</option>
+      </select>
+      <span style="font-size:13px">Click any <b>1</b> in the matrix to highlight that edge.</span>
+    </div>
+    <div class="lab">
+      <div><svg class="graph" id="repGraph" viewBox="0 0 440 300" role="img" aria-label="Graph being represented"></svg></div>
+      <div>
+        <p class="label">Adjacency matrix</p>
+        <div class="scrollx"><table class="matrix" id="repMatrix"></table></div>
+        <p class="label" style="margin-top:20px">Adjacency list</p>
+        <div class="adjlist" id="repList"></div>
+      </div>
+    </div>
+    <p id="repNote" style="margin:16px 0 0;font-size:14.5px;color:var(--ink-2)"></p>
+  </div>
+
+  <h3>Adjacency matrix</h3>
+  <p>A <code>V &times; V</code> array where <code>M[i][j] = 1</code> if an edge runs from vertex <code>i</code> to vertex <code>j</code>, and <code>0</code> otherwise. For a weighted graph, store the weight instead of 1 and use <code>&infin;</code> or 0 for absence.</p>
+  <p>In an <b>undirected</b> graph the matrix is always <b>symmetric</b> about the main diagonal, because every edge is recorded twice. In a <b>directed</b> graph it generally is not &mdash; switch the selector above and watch the symmetry break.</p>
+
+  <h3>Adjacency list</h3>
+  <p>An array of <code>V</code> lists. The list at index <code>u</code> holds exactly the vertices adjacent to <code>u</code>. An undirected edge <code>u&ndash;v</code> appears twice, once in each list; a directed edge appears only in the list of its source.</p>
+
+  <h3>Edge list</h3>
+  <p>The simplest of the three: just store all <code>E</code> pairs. Space is <code>O(E)</code>, but answering "is <code>u</code> adjacent to <code>v</code>?" needs a scan of every edge, so it is used mainly as an input format and by algorithms that process edges in bulk, such as Kruskal's.</p>
+
+  <h3>Cost comparison</h3>
+  <div class="scrollx">
+  <table>
+    <tr><th>Operation</th><th>Adjacency matrix</th><th>Adjacency list</th><th>Why</th></tr>
+    <tr><td>Space</td><td class="big">O(V&sup2;)</td><td class="big">O(V + E)</td><td>Matrix stores every non-edge as a 0; the list stores only what exists</td></tr>
+    <tr><td>Check edge (u, v)</td><td class="big">O(1)</td><td class="big">O(deg(u))</td><td>One array lookup versus walking one list</td></tr>
+    <tr><td>Insert edge</td><td class="big">O(1)</td><td class="big">O(1)</td><td>Set a cell, or push to the front of a list</td></tr>
+    <tr><td>Delete edge</td><td class="big">O(1)</td><td class="big">O(deg(u))</td><td>The list must be searched before removal</td></tr>
+    <tr><td>List all neighbours of u</td><td class="big">O(V)</td><td class="big">O(deg(u))</td><td>A whole matrix row must be scanned, even the zeros</td></tr>
+    <tr><td>Visit every edge once</td><td class="big">O(V&sup2;)</td><td class="big">O(V + E)</td><td>This is why traversals differ by representation</td></tr>
+    <tr><td>Add a vertex</td><td class="big">O(V&sup2;)</td><td class="big">O(1)</td><td>Matrix must be reallocated and copied</td></tr>
+  </table>
+  </div>
+
+  <div class="callout">
+    <b>Which to choose.</b> Use the <b>adjacency list</b> for sparse graphs, which is nearly always, and whenever the algorithm iterates over neighbours &mdash; DFS, BFS, Dijkstra, topological sort. Use the <b>adjacency matrix</b> for dense graphs, or when the program constantly asks whether one specific edge exists, or for algorithms defined on matrices such as Floyd&ndash;Warshall.
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="num">05</span>Depth First Search</h2>
+  <p class="sub">Go as deep as possible along one branch. Only when a vertex has no unvisited neighbour left do you back up and try the next option.</p>
+
+  <div class="def">
+    <b>Definition.</b> DFS visits a start vertex, marks it, then recursively visits any unvisited neighbour. When every neighbour of the current vertex has been visited, DFS <b>backtracks</b> to the vertex it came from. It uses a <b>stack</b> &mdash; either an explicit one, or the recursion call stack.
+  </div>
+
+  <h4>Algorithm</h4>
+<pre>DFS(G, u):
+    mark u as visited
+    add u to the traversal order
+    for each neighbour v of u:          <span class="c">// in some fixed order</span>
+        if v is not visited:
+            DFS(G, v)                   <span class="c">// go deeper</span>
+    <span class="c">// no neighbour left: return, i.e. backtrack</span>
+
+MAIN(G):
+    mark all vertices unvisited
+    for each vertex u in V:             <span class="c">// handles disconnected graphs</span>
+        if u is not visited:
+            DFS(G, u)</pre>
+
+  <p>The outer loop in <code>MAIN</code> matters. One call to <code>DFS</code> reaches only the vertices connected to the start; the loop restarts it on any vertex left untouched, so every component is covered.</p>
+
+  <div class="panel" id="labDFS"></div>
+
+  <h4>Properties</h4>
+  <ul>
+    <li>Each vertex is marked visited exactly once, so it is expanded once.</li>
+    <li>The edges it uses to reach new vertices form a <b>DFS tree</b>; the rest are back, forward or cross edges.</li>
+    <li>Finding a <b>back edge</b> &mdash; an edge to a vertex still on the recursion stack &mdash; proves the graph contains a cycle. This is the standard cycle-detection test.</li>
+    <li>Other uses: connected components, strongly connected components, topological sort, maze and puzzle solving.</li>
+  </ul>
+</section>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <h2><span class="num">06</span>Breadth First Search</h2>
+  <p class="sub">Visit everything one step away, then everything two steps away, and so on. The traversal expands in rings around the start vertex.</p>
+
+  <div class="def">
+    <b>Definition.</b> BFS visits the start vertex, then all of its neighbours, then all of their unvisited neighbours, level by level. It uses a <b>queue</b>, which is first-in first-out &mdash; the only structural difference from DFS.
+  </div>
+
+  <h4>Algorithm</h4>
+<pre>BFS(G, s):
+    mark all vertices unvisited
+    create empty queue Q
+    mark s visited                      <span class="c">// mark on ENQUEUE, not on dequeue</span>
+    enqueue s into Q
+    while Q is not empty:
+        u = dequeue(Q)
+        add u to the traversal order
+        for each neighbour v of u:
+            if v is not visited:
+                mark v visited
+                enqueue v into Q</pre>
+
+  <div class="callout">
+    <b>Mark on enqueue, not on dequeue.</b> If a vertex is marked only when it comes out of the queue, it can be pushed several times before that happens &mdash; once by each neighbour that sees it. The traversal still finishes, but the queue can grow far beyond <code>V</code> and duplicates get processed. This is the single most common BFS bug.
+  </div>
+
+  <div class="panel" id="labBFS"></div>
+
+  <h4>Properties</h4>
+  <ul>
+    <li>In an <b>unweighted</b> graph, BFS finds the <b>shortest path</b> from the start to every reachable vertex, measured in number of edges. DFS does not.</li>
+    <li>The vertices come out grouped by <b>level</b>: distance 0, then 1, then 2, and so on.</li>
+    <li>Other uses: shortest hop count, testing whether a graph is bipartite, finding connected components, peer-to-peer and crawler search.</li>
+  </ul>
+
+  <h3>DFS compared with BFS</h3>
+  <div class="scrollx">
+  <table>
+    <tr><th></th><th>DFS</th><th>BFS</th></tr>
+    <tr><td>Data structure</td><td>Stack (or recursion)</td><td>Queue</td></tr>
+    <tr><td>Order of discovery</td><td>Deepest branch first</td><td>Nearest first, level by level</td></tr>
+    <tr><td>Shortest path, unweighted</td><td>No guarantee</td><td>Guaranteed</td></tr>
+    <tr><td>Time, adjacency list</td><td class="big">O(V + E)</td><td class="big">O(V + E)</td></tr>
+    <tr><td>Time, adjacency matrix</td><td class="big">O(V&sup2;)</td><td class="big">O(V&sup2;)</td></tr>
+    <tr><td>Auxiliary space</td><td class="big">O(V)</td><td class="big">O(V)</td></tr>
+    <tr><td>Worst-case space cause</td><td>A long path, so the stack holds V frames</td><td>A wide level, so the queue holds O(V) vertices</td></tr>
+    <tr><td>Best suited to</td><td>Cycle detection, topological sort, components, backtracking</td><td>Shortest hops, level order, nearest-first search</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <h2><span class="num">07</span>Topological sort</h2>
+  <p class="sub">Given a set of tasks where some must come before others, produce one valid order to do them all.</p>
+
+  <div class="def">
+    <b>Definition.</b> A topological sort of a directed acyclic graph <code>G = (V, E)</code> is a linear ordering of all vertices such that for every directed edge <code>u &rarr; v</code>, vertex <code>u</code> appears before vertex <code>v</code> in the ordering.
+  </div>
+
+  <p>Two facts follow immediately, and both are common one-mark questions:</p>
+  <ul>
+    <li><b>A topological sort exists if and only if the graph is a DAG.</b> A cycle <code>u &rarr; v &rarr; u</code> would require <code>u</code> before <code>v</code> and <code>v</code> before <code>u</code> at the same time.</li>
+    <li><b>It is usually not unique.</b> Any two vertices with no directed path between them may be ordered either way.</li>
+  </ul>
+
+  <h4>Kahn's algorithm &mdash; the in-degree method</h4>
+<pre>TOPOSORT(G):
+    compute in-degree of every vertex
+    Q = all vertices with in-degree 0
+    order = empty list
+    while Q is not empty:
+        u = dequeue(Q)
+        append u to order
+        for each neighbour v of u:      <span class="c">// each edge u -> v</span>
+            in-degree[v] = in-degree[v] - 1
+            if in-degree[v] == 0:
+                enqueue v into Q
+    if order contains fewer than V vertices:
+        report "graph has a cycle"
+    else:
+        return order</pre>
+
+  <p>The idea is simple: a vertex is ready when nothing still points at it. Removing a vertex removes its outgoing edges, which may make its successors ready in turn.</p>
+
+  <div class="panel" id="labTopo"></div>
+
+  <h4>The DFS method</h4>
+  <p>The alternative runs a full DFS and pushes each vertex onto a stack <b>after</b> all of its descendants finish. Popping the stack gives a topological order.</p>
+<pre>TOPOSORT-DFS(G):
+    mark all vertices unvisited
+    S = empty stack
+    for each vertex u in V:
+        if u is not visited:
+            VISIT(u)
+    return S popped from top to bottom
+
+VISIT(u):
+    mark u visited
+    for each neighbour v of u:
+        if v is not visited:
+            VISIT(v)
+    push u onto S                       <span class="c">// after the subtree is finished</span></pre>
+  <p>Both methods run in <code>O(V + E)</code>. Kahn's is easier to trace by hand and detects cycles naturally through the final count; the DFS version needs no in-degree array but requires an extra colour or on-stack flag to report a cycle.</p>
+
+  <div class="callout">
+    <b>Worked reading of the example.</b> Treat the vertices as subjects and the arrows as "must be passed before". A vertex with in-degree 0 is a subject with no pending prerequisite, so it can be taken now. The algorithm repeatedly takes such a subject and relaxes the requirements it unlocks.
+  </div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section id="s8">
+  <h2><span class="num">08</span>Complexity, and how to derive it</h2>
+  <p class="sub">Do not memorise the table. Each result comes from one counting argument, which is what a viva will ask for.</p>
+
+  <h3>Why traversals cost O(V + E)</h3>
+  <p>Using an <b>adjacency list</b>, take DFS or BFS and count two things separately.</p>
+  <ul>
+    <li><b>Vertices.</b> The visited flag guarantees each vertex is expanded exactly once. Expanding one vertex costs a constant amount of bookkeeping. Total: <code>O(V)</code>.</li>
+    <li><b>Edges.</b> When a vertex is expanded, its whole adjacency list is scanned once. Summing over all vertices, the total work is <code>&Sigma; deg(u) = 2E</code> for an undirected graph, or <code>E</code> for a directed one. Total: <code>O(E)</code>.</li>
+  </ul>
+  <p>Adding them gives <code>O(V + E)</code>. The <code>V</code> term cannot be dropped, because a graph with no edges still requires all <code>V</code> vertices to be initialised and checked.</p>
+
+  <p>Using an <b>adjacency matrix</b> the edge count changes. Finding the neighbours of a vertex means scanning a full row of length <code>V</code>, whether or not the entries are zeros. That is <code>V</code> work per vertex, giving <code>V &times; V = O(V&sup2;)</code> regardless of how few edges exist.</p>
+
+  <h3>Master table</h3>
+  <div class="scrollx">
+  <table>
+    <tr><th>Operation</th><th>Time, adjacency list</th><th>Time, adjacency matrix</th><th>Auxiliary space</th></tr>
+    <tr><td>Build the structure</td><td class="big">O(V + E)</td><td class="big">O(V&sup2;)</td><td class="big">O(V + E) / O(V&sup2;)</td></tr>
+    <tr><td>DFS, full traversal</td><td class="big">O(V + E)</td><td class="big">O(V&sup2;)</td><td class="big">O(V)</td></tr>
+    <tr><td>BFS, full traversal</td><td class="big">O(V + E)</td><td class="big">O(V&sup2;)</td><td class="big">O(V)</td></tr>
+    <tr><td>Topological sort, Kahn</td><td class="big">O(V + E)</td><td class="big">O(V&sup2;)</td><td class="big">O(V)</td></tr>
+    <tr><td>Topological sort, DFS</td><td class="big">O(V + E)</td><td class="big">O(V&sup2;)</td><td class="big">O(V)</td></tr>
+    <tr><td>Cycle detection</td><td class="big">O(V + E)</td><td class="big">O(V&sup2;)</td><td class="big">O(V)</td></tr>
+    <tr><td>Connected components</td><td class="big">O(V + E)</td><td class="big">O(V&sup2;)</td><td class="big">O(V)</td></tr>
+    <tr><td>Check a single edge</td><td class="big">O(deg(u))</td><td class="big">O(1)</td><td class="big">O(1)</td></tr>
+  </table>
+  </div>
+
+  <h3>Where the space goes</h3>
+  <p>Auxiliary space means memory used <b>beyond</b> the graph itself.</p>
+  <table>
+    <tr><th>Component</th><th>DFS</th><th>BFS</th><th>Kahn</th></tr>
+    <tr><td>visited array</td><td class="big">O(V)</td><td class="big">O(V)</td><td class="big">&mdash;</td></tr>
+    <tr><td>stack / queue</td><td class="big">O(V) worst case</td><td class="big">O(V) worst case</td><td class="big">O(V)</td></tr>
+    <tr><td>in-degree array</td><td class="big">&mdash;</td><td class="big">&mdash;</td><td class="big">O(V)</td></tr>
+    <tr><td>output order</td><td class="big">O(V)</td><td class="big">O(V)</td><td class="big">O(V)</td></tr>
+    <tr><td><b>Total</b></td><td class="big">O(V)</td><td class="big">O(V)</td><td class="big">O(V)</td></tr>
+  </table>
+  <p>The worst cases are different in shape even though the bound is the same. DFS reaches <code>O(V)</code> stack depth on a long chain <code>A &rarr; B &rarr; C &rarr; &hellip;</code>, where the recursion never returns until the end. BFS reaches <code>O(V)</code> queue length on a star, where one vertex enqueues every other vertex at once.</p>
+  <h3>The same algorithms in the AI search model</h3>
+  <p>Courses on artificial intelligence state these costs differently &mdash; DFS as <code>O(b<sup>m</sup>)</code> time and <code>O(b&middot;m)</code> space, BFS as <code>O(b<sup>d</sup>)</code> for both. Neither statement contradicts the table above. They measure the same algorithms against a different kind of input.</p>
+
+  <table>
+    <tr><th></th><th>Data structure model</th><th>AI search model</th></tr>
+    <tr><td>Input</td><td>A graph already stored in memory</td><td>A state space generated on demand</td></tr>
+    <tr><td>Size known in advance</td><td>Yes &mdash; V and E are given</td><td>No, and possibly infinite</td></tr>
+    <tr><td>Parameters</td><td class="big">V, E</td><td class="big">b, d, m</td></tr>
+    <tr><td>Visited set</td><td>Always maintained</td><td>Often absent (tree search)</td></tr>
+  </table>
+
+  <p>Here <code>b</code> is the <b>branching factor</b>, the number of successors per state; <code>d</code> is the depth of the <b>shallowest goal</b>; and <code>m</code> is the <b>maximum depth</b> of the space.</p>
+
+  <h4>The two time bounds are the same statement</h4>
+  <p>A tree with branching factor <code>b</code> explored to depth <code>d</code> holds</p>
+  <p style="text-align:center;font-family:var(--mono);font-size:15px">V = 1 + b + b&sup2; + &hellip; + b<sup>d</sup> = O(b<sup>d</sup>)</p>
+  <p>nodes, and a tree has <code>E = V &minus; 1</code> edges. Substituting into <code>O(V + E)</code> gives <code>O(b<sup>d</sup>)</code>. One formula is written in terms of the structure you stored, the other in terms of the shape of the space you are generating.</p>
+
+  <div class="callout">
+    <b>Careful with the DFS exponent.</b> DFS time is <code>O(b<sup>m</sup>)</code>, not <code>O(b<sup>d</sup>)</code>. DFS drives one branch to the bottom, so it can spend <code>b<sup>m</sup></code> work on a deep branch before ever reaching a goal that sits at depth <code>d</code>. Since <code>m &ge; d</code>, and <code>m</code> may be infinite, this is strictly worse than BFS. It is also why DFS is <b>not complete</b> in an infinite space while BFS is.
+  </div>
+
+  <h4>Why the space bounds diverge</h4>
+  <p>In the data structure model both traversals carry a visited array of size <code>V</code>. That term dominates, so both land on <code>O(V)</code> and the difference between a stack and a queue never shows up in the bound.</p>
+  <p>In tree search there is no visited array &mdash; states are generated when needed and discarded. Space is then the <b>frontier alone</b>, and the stack-versus-queue difference becomes the only thing that matters.</p>
+
+  <div class="grid4" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+    <div class="mini-card"><svg viewBox="0 0 340 200" role="img" aria-label="Search tree showing the frontier for BFS"><line x1="170" y1="39" x2="60" y2="89" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="39" x2="170" y2="89" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="39" x2="280" y2="89" stroke="#9DAAB4" stroke-width="1.4"/><line x1="60" y1="111" x2="20" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="60" y1="111" x2="60" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="60" y1="111" x2="100" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="111" x2="130" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="111" x2="170" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="111" x2="210" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="280" y1="111" x2="240" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="280" y1="111" x2="280" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="280" y1="111" x2="320" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><circle cx="170" cy="28" r="11" fill="#DCEDEA" stroke="#0B6E63" stroke-width="1.8"/><circle cx="60" cy="100" r="11" fill="#DCEDEA" stroke="#0B6E63" stroke-width="1.8"/><circle cx="170" cy="100" r="11" fill="#DCEDEA" stroke="#0B6E63" stroke-width="1.8"/><circle cx="280" cy="100" r="11" fill="#DCEDEA" stroke="#0B6E63" stroke-width="1.8"/><circle cx="20" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="60" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="100" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="130" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="170" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="210" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="240" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="280" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="320" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/></svg><h5>BFS frontier</h5><p>An entire level is held at once. With <code>b = 3</code> at depth 2 that is <code>b<sup>d</sup> = 9</code> nodes in memory, growing exponentially. BFS runs out of memory long before it runs out of time.</p></div>
+    <div class="mini-card"><svg viewBox="0 0 340 200" role="img" aria-label="Search tree showing the frontier for DFS"><line x1="170" y1="39" x2="60" y2="89" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="39" x2="170" y2="89" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="39" x2="280" y2="89" stroke="#9DAAB4" stroke-width="1.4"/><line x1="60" y1="111" x2="20" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="60" y1="111" x2="60" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="60" y1="111" x2="100" y2="157" stroke="#9DAAB4" stroke-width="1.4"/><line x1="170" y1="111" x2="130" y2="157" stroke="#C3CDD4" stroke-width="1.4" stroke-dasharray="3 3"/><line x1="170" y1="111" x2="170" y2="157" stroke="#C3CDD4" stroke-width="1.4" stroke-dasharray="3 3"/><line x1="170" y1="111" x2="210" y2="157" stroke="#C3CDD4" stroke-width="1.4" stroke-dasharray="3 3"/><line x1="280" y1="111" x2="240" y2="157" stroke="#C3CDD4" stroke-width="1.4" stroke-dasharray="3 3"/><line x1="280" y1="111" x2="280" y2="157" stroke="#C3CDD4" stroke-width="1.4" stroke-dasharray="3 3"/><line x1="280" y1="111" x2="320" y2="157" stroke="#C3CDD4" stroke-width="1.4" stroke-dasharray="3 3"/><circle cx="170" cy="28" r="11" fill="#B01B5E" stroke="#B01B5E" stroke-width="1.8"/><circle cx="60" cy="100" r="11" fill="#B01B5E" stroke="#B01B5E" stroke-width="1.8"/><circle cx="170" cy="100" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="280" cy="100" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="20" cy="168" r="11" fill="#B01B5E" stroke="#B01B5E" stroke-width="1.8"/><circle cx="60" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="100" cy="168" r="11" fill="#FBEBD8" stroke="#8A4B00" stroke-width="1.8"/><circle cx="130" cy="168" r="11" fill="#FFFFFF" stroke="#C3CDD4" stroke-width="1.8" stroke-dasharray="3 3"/><circle cx="170" cy="168" r="11" fill="#FFFFFF" stroke="#C3CDD4" stroke-width="1.8" stroke-dasharray="3 3"/><circle cx="210" cy="168" r="11" fill="#FFFFFF" stroke="#C3CDD4" stroke-width="1.8" stroke-dasharray="3 3"/><circle cx="240" cy="168" r="11" fill="#FFFFFF" stroke="#C3CDD4" stroke-width="1.8" stroke-dasharray="3 3"/><circle cx="280" cy="168" r="11" fill="#FFFFFF" stroke="#C3CDD4" stroke-width="1.8" stroke-dasharray="3 3"/><circle cx="320" cy="168" r="11" fill="#FFFFFF" stroke="#C3CDD4" stroke-width="1.8" stroke-dasharray="3 3"/></svg><h5>DFS frontier</h5><p>One path plus the unexpanded siblings at each level: <code>m + (b&minus;1)m = b&middot;m</code>, here 6 nodes. The dashed nodes are never generated at all. Linear, not exponential.</p></div>
+  </div>
+
+  <div class="scrollx">
+  <table>
+    <tr><th>Property (tree search)</th><th>DFS</th><th>BFS</th></tr>
+    <tr><td>Time</td><td class="big">O(b<sup>m</sup>)</td><td class="big">O(b<sup>d</sup>)</td></tr>
+    <tr><td>Space</td><td class="big">O(b&middot;m)</td><td class="big">O(b<sup>d</sup>)</td></tr>
+    <tr><td>Complete</td><td>No &mdash; can descend forever</td><td>Yes, if <code>b</code> is finite</td></tr>
+    <tr><td>Optimal</td><td>No</td><td>Yes, when every step costs the same</td></tr>
+    <tr><td>Practical limit</td><td>Time</td><td>Memory</td></tr>
+  </table>
+  </div>
+
+  <p>The two weaknesses are complementary, which is exactly what <b>iterative deepening</b> exploits: run a depth-limited DFS for limit 0, 1, 2, &hellip; until the goal appears. It keeps the <code>O(b&middot;d)</code> space of DFS and the completeness and optimality of BFS, at <code>O(b<sup>d</sup>)</code> time &mdash; the repeated work costs only a constant factor, because the last level dominates the sum.</p>
+
+</section>
+
+<!-- ============ 9 ============ -->
+<section id="s9">
+  <h2><span class="num">09</span>Self-check</h2>
+  <p class="sub">Answer before revealing. Each one targets a point students commonly lose marks on.</p>
+  <ul class="qlist" id="quiz"></ul>
+</section>
+
+<footer>
+  <p><b>Sree S Bhagya</b>, Assistant Professor, Centre for Artificial Intelligence, TKM College of Engineering.</p>
+  <p style="margin:0">Interactive course material on graphs and graph traversal. Every traversal on this page visits neighbours in alphabetical order so that the output is reproducible; a different neighbour order gives a different but equally valid traversal.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- graph data ---------------- */
+var GRAPHS={
+  undirected:{
+    directed:false,
+    pos:{A:[220,42],B:[110,122],C:[330,122],D:[52,232],E:[190,232],F:[330,232]},
+    edges:[['A','B'],['A','C'],['B','D'],['B','E'],['C','F'],['E','F']]
+  },
+  dag:{
+    directed:true,
+    pos:{A:[90,50],B:[280,50],C:[180,150],D:[360,150],E:[180,250],F:[360,250]},
+    edges:[['A','C'],['B','C'],['B','D'],['C','E'],['D','F'],['E','F']]
+  }
+};
+var ORDER=['A','B','C','D','E','F'];
+
+function adjacency(g){
+  var a={};ORDER.forEach(function(v){a[v]=[]});
+  g.edges.forEach(function(e){
+    a[e[0]].push(e[1]);
+    if(!g.directed) a[e[1]].push(e[0]);
+  });
+  ORDER.forEach(function(v){a[v].sort()});
+  return a;
+}
+
+/* ---------------- drawing ---------------- */
+var R=21;
+function trim(p,q,rs,rt){
+  var dx=q[0]-p[0],dy=q[1]-p[1],L=Math.sqrt(dx*dx+dy*dy)||1,ux=dx/L,uy=dy/L;
+  return [p[0]+ux*rs,p[1]+uy*rs,q[0]-ux*rt,q[1]-uy*rt];
+}
+function draw(svg,g,st){
+  st=st||{};
+  var vis=st.visited||[],fr=st.frontier||[],cur=st.current||null,act=st.edge||null,lit=st.lit||null;
+  var s='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="#5C6E7C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>'+
+    '<marker id="ahL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="#B01B5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
+
+  g.edges.forEach(function(e){
+    var on=(act&&((act[0]===e[0]&&act[1]===e[1])||(!g.directed&&act[0]===e[1]&&act[1]===e[0])))||
+           (lit&&((lit[0]===e[0]&&lit[1]===e[1])||(!g.directed&&lit[0]===e[1]&&lit[1]===e[0])));
+    var t=trim(g.pos[e[0]],g.pos[e[1]],R,g.directed?R+7:R);
+    s+='<line x1="'+t[0]+'" y1="'+t[1]+'" x2="'+t[2]+'" y2="'+t[3]+'" stroke="'+(on?'#B01B5E':'#9DAAB4')+'" stroke-width="'+(on?3:1.6)+'"'+
+       (g.directed?' marker-end="url(#'+(on?'ahL':'ah')+')"':'')+'/>';
+  });
+
+  ORDER.forEach(function(v){
+    var p=g.pos[v],fill='#FFFFFF',stroke='#9DAAB4',tc='#16232E',sw=1.6;
+    if(vis.indexOf(v)>-1){fill='#DCEDEA';stroke='#0B6E63';tc='#0B6E63'}
+    if(fr.indexOf(v)>-1){fill='#FBEBD8';stroke='#8A4B00';tc='#8A4B00'}
+    if(cur===v){fill='#B01B5E';stroke='#B01B5E';tc='#FFFFFF';sw=2.5}
+    s+='<circle class="node-c" cx="'+p[0]+'" cy="'+p[1]+'" r="'+R+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>'+
+       '<text class="nlab" x="'+p[0]+'" y="'+p[1]+'" text-anchor="middle" dominant-baseline="central" fill="'+tc+'">'+v+'</text>';
+  });
+  svg.innerHTML=s;
+}
+
+/* ---------------- section 2: reference graph ---------------- */
+draw(document.getElementById('refGraph'),GRAPHS.undirected,{});
+
+/* ---------------- section 3: type gallery ---------------- */
+(function(){
+  function mini(nodes,edges,dir,weights){
+    var s='<svg viewBox="0 0 170 110">';
+    if(dir) s+='<defs><marker id="m'+(mini.n=(mini.n||0)+1)+'" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="#5C6E7C" stroke-width="1.8" stroke-linecap="round"/></marker></defs>';
+    var mk=dir?' marker-end="url(#m'+mini.n+')"':'';
+    edges.forEach(function(e,ix){
+      var a=nodes[e[0]],b=nodes[e[1]],t=trim(a,b,15,dir?21:15);
+      s+='<line x1="'+t[0]+'" y1="'+t[1]+'" x2="'+t[2]+'" y2="'+t[3]+'" stroke="#9DAAB4" stroke-width="1.6"'+mk+'/>';
+      if(weights) s+='<text class="elab" x="'+((a[0]+b[0])/2)+'" y="'+((a[1]+b[1])/2-5)+'" text-anchor="middle">'+weights[ix]+'</text>';
+    });
+    Object.keys(nodes).forEach(function(k){
+      var p=nodes[k];
+      s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="15" fill="#FFF" stroke="#9DAAB4" stroke-width="1.6"/>'+
+         '<text class="nlab" x="'+p[0]+'" y="'+p[1]+'" text-anchor="middle" dominant-baseline="central" fill="#16232E" font-size="13">'+k+'</text>';
+    });
+    return s+'</svg>';
+  }
+  var N={P:[30,30],Q:[135,30],R:[30,85],S:[135,85]};
+  var cards=[
+    ['Undirected',mini(N,[['P','Q'],['P','R'],['Q','S'],['R','S']],false),'Edges have no direction. <code>(P,Q)</code> and <code>(Q,P)</code> are one and the same edge.'],
+    ['Directed (digraph)',mini(N,[['P','Q'],['P','R'],['Q','S'],['R','S']],true),'Each edge runs one way. In-degree and out-degree are counted separately.'],
+    ['Weighted',mini(N,[['P','Q'],['P','R'],['Q','S'],['R','S']],false,[4,2,7,3]),'Each edge carries a cost. Required by Dijkstra, Prim and Kruskal.'],
+    ['DAG',mini({P:[30,30],Q:[135,30],R:[30,85],S:[135,85]},[['P','Q'],['P','R'],['Q','S'],['R','S']],true),'Directed with no cycle. The only kind that can be topologically sorted.']
+  ];
+  document.getElementById('typeGallery').innerHTML=cards.map(function(c){
+    return '<div class="mini-card">'+c[1]+'<h5>'+c[0]+'</h5><p>'+c[2]+'</p></div>';
+  }).join('');
+})();
+
+/* ---------------- section 4: representation explorer ---------------- */
+(function(){
+  var pick=document.getElementById('repPick'),svg=document.getElementById('repGraph'),
+      mx=document.getElementById('repMatrix'),lst=document.getElementById('repList'),
+      note=document.getElementById('repNote'),lit=null,key='undirected';
+
+  function has(g,u,v){
+    return g.edges.some(function(e){
+      return (e[0]===u&&e[1]===v)||(!g.directed&&e[0]===v&&e[1]===u);
+    });
+  }
+  function render(){
+    var g=GRAPHS[key];
+    draw(svg,g,{lit:lit});
+    var h='<tr><th></th>'+ORDER.map(function(v){return '<th>'+v+'</th>'}).join('')+'</tr>';
+    ORDER.forEach(function(u){
+      h+='<tr><th>'+u+'</th>';
+      ORDER.forEach(function(v){
+        var one=has(g,u,v);
+        var on=lit&&lit[0]===u&&lit[1]===v;
+        h+='<td class="'+(one?'one':'')+(on?' lit':'')+'"'+(one?' data-u="'+u+'" data-v="'+v+'" tabindex="0"':'')+'>'+(one?1:0)+'</td>';
+      });
+      h+='</tr>';
+    });
+    mx.innerHTML=h;
+    var a=adjacency(g);
+    lst.innerHTML=ORDER.map(function(u){
+      return '<div><span class="k">'+u+'</span> &rarr; '+(a[u].length?a[u].join(', '):'&empty;')+'</div>';
+    }).join('');
+    note.innerHTML=g.directed
+      ? 'Directed: the matrix is <b>not</b> symmetric &mdash; <code>M[A][C] = 1</code> but <code>M[C][A] = 0</code>. Each edge appears once in the matrix and once in the adjacency list. Total list entries = E = 6.'
+      : 'Undirected: the matrix is <b>symmetric</b> &mdash; every edge is stored twice, at <code>M[u][v]</code> and <code>M[v][u]</code>. The adjacency list also stores each edge twice, so total list entries = 2E = 12.';
+  }
+  mx.addEventListener('click',function(e){
+    var td=e.target.closest('td.one');if(!td)return;
+    var u=td.getAttribute('data-u'),v=td.getAttribute('data-v');
+    lit=(lit&&lit[0]===u&&lit[1]===v)?null:[u,v];render();
+  });
+  pick.onchange=function(){key=pick.value;lit=null;render()};
+  render();
+})();
+
+/* ---------------- traversal step builders ---------------- */
+function dfsSteps(g,start){
+  var a=adjacency(g),vis=[],order=[],stack=[],steps=[];
+  function snap(cur,note,edge){
+    steps.push({visited:vis.slice(),order:order.slice(),frontier:stack.slice(),current:cur,note:note,edge:edge||null});
+  }
+  snap(null,'Nothing visited yet. The stack is empty. DFS will start at <b>'+start+'</b>.',null);
+  (function go(u,from){
+    vis.push(u);order.push(u);stack.push(u);
+    snap(u,from?('Followed the edge <b>'+from+'&ndash;'+u+'</b>. Visit <b>'+u+'</b>, mark it, and push it on the stack.')
+              :('Start at <b>'+start+'</b>. Mark it visited and push it on the stack.'),from?[from,u]:null);
+    a[u].forEach(function(v){
+      if(vis.indexOf(v)===-1) go(v,u);
+      else snap(u,'From <b>'+u+'</b>, neighbour <b>'+v+'</b> is already visited. Skip it and check the next neighbour.',[u,v]);
+    });
+    stack.pop();
+    snap(stack.length?stack[stack.length-1]:null,
+      'Every neighbour of <b>'+u+'</b> is done, so pop it. '+(stack.length?('Backtrack to <b>'+stack[stack.length-1]+'</b>.'):'The stack is now empty &mdash; the traversal is complete.'),null);
+  })(start,null);
+  return steps;
+}
+
+function bfsSteps(g,start){
+  var a=adjacency(g),vis=[start],order=[],q=[start],steps=[];
+  function snap(cur,note,edge){
+    steps.push({visited:order.slice(),order:order.slice(),frontier:q.slice(),current:cur,note:note,edge:edge||null});
+  }
+  steps.push({visited:[],order:[],frontier:[start],current:null,
+    note:'Mark <b>'+start+'</b> visited and enqueue it. Note that marking happens on enqueue, not on dequeue.',edge:null});
+  while(q.length){
+    var u=q.shift();order.push(u);
+    snap(u,'Dequeue <b>'+u+'</b> from the front and add it to the traversal order. Now look at its neighbours.',null);
+    a[u].forEach(function(v){
+      if(vis.indexOf(v)===-1){
+        vis.push(v);q.push(v);
+        snap(u,'<b>'+v+'</b> is new. Mark it visited and enqueue it at the back.',[u,v]);
+      } else {
+        snap(u,'Neighbour <b>'+v+'</b> is already marked, so it is not enqueued again.',[u,v]);
+      }
+    });
+  }
+  steps.push({visited:order.slice(),order:order.slice(),frontier:[],current:null,
+    note:'The queue is empty, so every reachable vertex has been visited. The traversal is complete.',edge:null});
+  return steps;
+}
+
+/* ---------------- traversal lab component ---------------- */
+function makeLab(rootId,algo){
+  var root=document.getElementById(rootId),gkey='undirected',start='A',steps=[],i=0,timer=null;
+  var frontierName=(algo==='dfs')?'Stack':'Queue';
+  root.innerHTML=
+    '<div class="pickrow"><label>Start vertex:</label><select class="sv">'+
+      ORDER.map(function(v){return '<option>'+v+'</option>'}).join('')+'</select>'+
+      '<span style="font-size:13px">Neighbours are taken in alphabetical order.</span></div>'+
+    '<div class="lab">'+
+      '<div><svg class="graph gv" viewBox="0 0 440 300" role="img" aria-label="Traversal in progress"></svg>'+
+      '<div class="legend"><span><i class="lg-u"></i>unvisited</span><span><i class="lg-n"></i>current</span>'+
+      (algo==='dfs'?'<span><i class="lg-w"></i>on the stack</span><span><i class="lg-s"></i>visited, popped</span>':'<span><i class="lg-w"></i>in queue</span><span><i class="lg-s"></i>dequeued</span>')+
+      '</div></div>'+
+      '<div><p class="label">'+frontierName+(algo==='dfs'?' &mdash; top at the right':' &mdash; front at the left')+'</p>'+
+      '<div class="track fr"></div>'+
+      '<p class="label" style="margin-top:18px">Traversal order</p><div class="track od"></div>'+
+      '<p class="label" style="margin-top:18px">What just happened</p><p class="note nt"></p></div>'+
+    '</div>'+
+    '<div class="controls"><button class="ghost rs">Reset</button><button class="ghost bk">Back</button>'+
+      '<button class="nx">Next</button><button class="ghost rn">Run</button>'+
+      '<span class="counter ct"></span></div>';
+
+  var q=function(s){return root.querySelector(s)};
+  var svg=q('.gv'),fr=q('.fr'),od=q('.od'),nt=q('.nt'),ct=q('.ct'),sv=q('.sv');
+
+  function build(){
+    steps=(algo==='dfs')?dfsSteps(GRAPHS[gkey],start):bfsSteps(GRAPHS[gkey],start);
+    i=0;render();
+  }
+  function render(){
+    var s=steps[i];
+    var st={current:s.current,edge:s.edge};
+    if(algo==='dfs'){st.visited=s.visited;st.frontier=s.frontier}
+    else{st.visited=s.order;st.frontier=s.frontier}
+    draw(svg,GRAPHS[gkey],st);
+
+    fr.innerHTML=s.frontier.length
+      ? s.frontier.map(function(v,x){
+          var isEnd=(algo==='dfs')?(x===s.frontier.length-1):(x===0);
+          return '<div class="tok '+(isEnd?'top':'wait')+'">'+v+(isEnd?'<span class="mini">'+(algo==='dfs'?'top':'front')+'</span>':'')+'</div>';
+        }).join('')
+      : '<div class="none">empty</div>';
+    od.innerHTML=s.order.length
+      ? s.order.map(function(v){return '<div class="tok hl">'+v+'</div>'}).join('')
+      : '<div class="none">nothing yet</div>';
+    nt.innerHTML=s.note;
+    ct.textContent='step '+i+' / '+(steps.length-1);
+    q('.bk').disabled=q('.rs').disabled=(i===0);
+    var end=(i===steps.length-1);
+    q('.nx').disabled=end;q('.rn').disabled=end;
+  }
+  function stop(){if(timer){clearInterval(timer);timer=null;q('.rn').textContent='Run'}}
+  function step(d){var n=i+d;if(n<0||n>steps.length-1)return;i=n;render()}
+
+  sv.onchange=function(){stop();start=sv.value;build()};
+  q('.nx').onclick=function(){stop();step(1)};
+  q('.bk').onclick=function(){stop();step(-1)};
+  q('.rs').onclick=function(){stop();i=0;render()};
+  q('.rn').onclick=function(){
+    if(timer){stop();return}
+    q('.rn').textContent='Pause';
+    timer=setInterval(function(){if(i>=steps.length-1){stop();render();return}step(1)},780);
+  };
+  build();
+}
+makeLab('labDFS','dfs');
+makeLab('labBFS','bfs');
+
+/* ---------------- topological sort lab ---------------- */
+(function(){
+  var root=document.getElementById('labTopo'),g=GRAPHS.dag,steps=[],i=0,timer=null;
+
+  (function build(){
+    var a=adjacency(g),ind={};
+    ORDER.forEach(function(v){ind[v]=0});
+    g.edges.forEach(function(e){ind[e[1]]++});
+    var q=ORDER.filter(function(v){return ind[v]===0}),order=[];
+    function copy(o){var c={};Object.keys(o).forEach(function(k){c[k]=o[k]});return c}
+    steps.push({ind:copy(ind),q:q.slice(),order:[],current:null,edge:null,
+      note:'Count how many arrows point at each vertex. <b>'+q.join('</b> and <b>')+'</b> have in-degree 0, so nothing blocks them. Enqueue both.'});
+    while(q.length){
+      var u=q.shift();order.push(u);
+      steps.push({ind:copy(ind),q:q.slice(),order:order.slice(),current:u,edge:null,
+        note:'Dequeue <b>'+u+'</b> and append it to the order. Now remove its outgoing edges.'});
+      a[u].forEach(function(v){
+        ind[v]--;
+        var ready=ind[v]===0;
+        if(ready)q.push(v);
+        steps.push({ind:copy(ind),q:q.slice(),order:order.slice(),current:u,edge:[u,v],
+          note:'Edge <b>'+u+' &rarr; '+v+'</b> is removed, so in-degree of <b>'+v+'</b> drops to '+ind[v]+'. '+
+               (ready?('It is now unblocked &mdash; enqueue <b>'+v+'</b>.'):('Still blocked, so it waits.'))});
+      });
+    }
+    steps.push({ind:copy(ind),q:[],order:order.slice(),current:null,edge:null,
+      note:'The queue is empty and the order holds all '+order.length+' vertices, so the graph has no cycle. <b>'+order.join(' &rarr; ')+'</b> is a valid topological order.'});
+  })();
+
+  root.innerHTML=
+    '<div class="lab">'+
+      '<div><svg class="graph gv" viewBox="0 0 440 300" role="img" aria-label="Directed acyclic graph being sorted"></svg>'+
+      '<div class="legend"><span><i class="lg-u"></i>waiting</span><span><i class="lg-n"></i>current</span><span><i class="lg-w"></i>in queue</span><span><i class="lg-s"></i>output</span></div></div>'+
+      '<div><p class="label">In-degree</p><div class="track id"></div>'+
+      '<p class="label" style="margin-top:18px">Queue &mdash; front at the left</p><div class="track qq"></div>'+
+      '<p class="label" style="margin-top:18px">Topological order</p><div class="track od"></div>'+
+      '<p class="label" style="margin-top:18px">What just happened</p><p class="note nt"></p></div>'+
+    '</div>'+
+    '<div class="controls"><button class="ghost rs">Reset</button><button class="ghost bk">Back</button>'+
+      '<button class="nx">Next</button><button class="ghost rn">Run</button><span class="counter ct"></span></div>';
+
+  var q=function(s){return root.querySelector(s)};
+  var svg=q('.gv'),idEl=q('.id'),qq=q('.qq'),od=q('.od'),nt=q('.nt'),ct=q('.ct');
+
+  function render(){
+    var s=steps[i];
+    draw(svg,g,{visited:s.order,frontier:s.q,current:s.current,edge:s.edge});
+    idEl.innerHTML=ORDER.map(function(v){
+      var done=s.order.indexOf(v)>-1;
+      return '<div class="tok'+(done?' hl':(s.ind[v]===0?' wait':''))+'">'+v+'<span class="mini">'+(done?'done':s.ind[v])+'</span></div>';
+    }).join('');
+    qq.innerHTML=s.q.length
+      ? s.q.map(function(v,x){return '<div class="tok '+(x===0?'top':'wait')+'">'+v+(x===0?'<span class="mini">front</span>':'')+'</div>'}).join('')
+      : '<div class="none">empty</div>';
+    od.innerHTML=s.order.length
+      ? s.order.map(function(v){return '<div class="tok hl">'+v+'</div>'}).join('')
+      : '<div class="none">nothing yet</div>';
+    nt.innerHTML=s.note;
+    ct.textContent='step '+i+' / '+(steps.length-1);
+    q('.bk').disabled=q('.rs').disabled=(i===0);
+    var end=(i===steps.length-1);
+    q('.nx').disabled=end;q('.rn').disabled=end;
+  }
+  function stop(){if(timer){clearInterval(timer);timer=null;q('.rn').textContent='Run'}}
+  function step(d){var n=i+d;if(n<0||n>steps.length-1)return;i=n;render()}
+  q('.nx').onclick=function(){stop();step(1)};
+  q('.bk').onclick=function(){stop();step(-1)};
+  q('.rs').onclick=function(){stop();i=0;render()};
+  q('.rn').onclick=function(){
+    if(timer){stop();return}
+    q('.rn').textContent='Pause';
+    timer=setInterval(function(){if(i>=steps.length-1){stop();render();return}step(1)},780);
+  };
+  render();
+})();
+
+/* ---------------- quiz ---------------- */
+(function(){
+  var Q=[
+    ['An undirected graph has 6 vertices whose degrees are 2, 3, 3, 1, 2, 3. How many edges does it have?',
+     'Sum of degrees = 14, and the sum always equals 2E, so E = 7. This works because every edge contributes 1 to the degree at each of its two ends.'],
+    ['Why is DFS on an adjacency matrix O(V&sup2;) rather than O(V + E), even for a graph with only 3 edges?',
+     'To find the neighbours of a vertex the algorithm must scan its entire matrix row of length V, including all the zeros. That is V work for each of the V vertices, so V&sup2; in total, no matter how few edges exist. The adjacency list scans only real neighbours, giving O(V + E).'],
+    ['A graph is a single chain A &rarr; B &rarr; C &rarr; &hellip; of 1000 vertices. Which uses more auxiliary space here, DFS or BFS?',
+     'DFS. The recursion never returns until the far end, so the stack holds all 1000 frames. BFS holds at most one vertex in the queue at any moment. Both are still O(V) in the worst case, but on this particular shape DFS hits the worst case and BFS does not. On a star graph the situation reverses.'],
+    ['Give two different valid topological orders for the DAG in section 7, or explain why only one exists.',
+     'A B C D E F and B A C D E F are both valid, and so are B D A C E F and A B D C E F. A and B have no path between them, so their relative order is free. A topological order is unique only when the DAG has a Hamiltonian path, that is, a directed path touching every vertex.'],
+    ['Kahn\u2019s algorithm finishes with only 4 of the 6 vertices in its output list. What does that tell you?',
+     'The graph contains a directed cycle. The two missing vertices lie on it, so their in-degree never reaches 0 and they are never enqueued. This count check is how Kahn\u2019s algorithm detects cycles without any extra machinery.'],
+    ['Which representation would you choose for a social network of 10 million users averaging 200 friends each, and why?',
+     'Adjacency list. A matrix would need 10&#8311; &times; 10&#8311; = 10&#185;&#8308; cells, which is impossible to store. The list needs about 2 &times; 10 million &times; 200 = 4 &times; 10&#8313; entries, which is large but feasible. The graph is extremely sparse: E is about 10&#8313; against a possible 5 &times; 10&#185;&#179;.']
+  ];
+  document.getElementById('quiz').innerHTML=Q.map(function(x,n){
+    return '<li><p class="q">'+(n+1)+'. '+x[0]+'</p><button class="qa" data-n="'+n+'">Show answer</button><p class="ans" id="ans'+n+'" hidden>'+x[1]+'</p></li>';
+  }).join('');
+  document.getElementById('quiz').addEventListener('click',function(e){
+    var b=e.target.closest('.qa');if(!b)return;
+    var p=document.getElementById('ans'+b.getAttribute('data-n'));
+    p.hidden=!p.hidden;b.textContent=p.hidden?'Show answer':'Hide answer';
+  });
+})();
+
+})();
+</script>
+</body>
+</html>
