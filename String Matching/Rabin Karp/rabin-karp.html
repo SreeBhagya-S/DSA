@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>String Matching & Rabin-Karp for Beginners</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#14213d;--mute:#5a6785;--line:#d5dcea;--acc:#2447c7;--ok:#13795b;--okbg:#d8f3e8;--warn:#a85d00;--warnbg:#ffe9c7;--bad:#b3261e;--badbg:#fde0dd;--win:#dfe7ff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1524;--card:#18203a;--ink:#e8ecf8;--mute:#9aa6c6;--line:#2c3759;--acc:#8fa8ff;--ok:#6ee0b4;--okbg:#14382d;--warn:#ffc16b;--warnbg:#4a3512;--bad:#ff9a92;--badbg:#4a1f1c;--win:#26346b}}
+:root[data-theme="dark"]{--bg:#0f1524;--card:#18203a;--ink:#e8ecf8;--mute:#9aa6c6;--line:#2c3759;--acc:#8fa8ff;--ok:#6ee0b4;--okbg:#14382d;--warn:#ffc16b;--warnbg:#4a3512;--bad:#ff9a92;--badbg:#4a1f1c;--win:#26346b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 "Atkinson Hyperlegible",system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 18px 80px}
+h1{font-size:2.1rem;line-height:1.2;margin:.4em 0 .2em}
+h2{font-size:1.45rem;margin:2.2em 0 .4em;line-height:1.3}
+p{margin:.6em 0}
+.lead{color:var(--mute);font-size:1.1rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+.def{border-left:5px solid var(--acc);border-radius:4px 12px 12px 4px}
+.def b.t{display:block;margin-bottom:2px;color:var(--acc)}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:500}
+code{background:var(--win);padding:1px 6px;border-radius:5px;font-size:.92em}
+.scroll{overflow-x:auto;padding:6px 2px}
+.strip{display:flex;position:relative;width:max-content;min-height:40px;margin:4px 0}
+.c{width:36px;height:40px;display:grid;place-items:center;border:1px solid var(--line);margin-right:-1px;font:700 17px "JetBrains Mono",monospace;background:var(--card)}
+.c small{display:block;font-size:10px;color:var(--mute);font-weight:500;margin-top:-6px}
+.c.win{background:var(--win);border-color:var(--acc)}
+.c.ok{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.c.bad{background:var(--badbg);border-color:var(--bad);color:var(--bad)}
+.c.warn{background:var(--warnbg);border-color:var(--warn);color:var(--warn)}
+.c.idx{border:0;background:none;height:20px;font-size:11px;color:var(--mute);font-weight:500}
+.lbl{font-size:.85rem;color:var(--mute);margin-top:6px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+button,select,input{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px}
+button{cursor:pointer;background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700}
+button.alt{background:var(--card);color:var(--ink);border-color:var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+input{width:11ch;font-family:"JetBrains Mono",monospace;text-transform:uppercase}
+input.wide{width:20ch}
+.say{padding:10px 14px;border-radius:10px;background:var(--win);margin-top:8px;min-height:3.2em}
+.say.ok{background:var(--okbg)}.say.warn{background:var(--warnbg)}.say.bad{background:var(--badbg)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+td,th{border:1px solid var(--line);padding:6px 8px;text-align:left}
+th{background:var(--win)}
+pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:500 14px/1.55 "JetBrains Mono",monospace}
+.eq{font-family:"JetBrains Mono",monospace;background:var(--card);border:1px dashed var(--acc);padding:10px 14px;border-radius:10px;overflow-x:auto}
+ol,ul{padding-left:1.3em}
+li{margin:.3em 0}
+.recap{background:var(--win);border-radius:12px;padding:6px 20px}
+@media (prefers-reduced-motion:no-preference){.c{transition:background .2s}}
+</style></head>
+<body><main>
+
+<h1>Finding words in text: string matching and the Rabin-Karp algorithm</h1>
+<p class="lead">Faculty: Sree S Bhagya, Asst. Professor, Centre for AI</p>
+
+<h2>1. What is string matching?</h2>
+<div class="card def"><b class="t">Definition</b>A <b>string</b> is a row of characters, like <code>HELLO</code>. <b>String matching</b> (also called pattern searching) means finding where a small string, the <b>pattern</b>, appears inside a bigger string, the <b>text</b>.</div>
+<p>You do this every time you press <code>Ctrl+F</code> in a browser, search a document, or check a DNA sequence for a gene. Below, the pattern <code>CAB</code> is searched in the text <code>DAACABCDBA</code>. It starts at position <b>3</b>. Positions are counted from 0.</p>
+<div class="card"><div class="scroll" id="fig1"></div><div class="lbl">Text on top, pattern lined up underneath at the spot where it matches.</div></div>
+<p>Let’s use <code>n</code> for the length of the text (here 10) and <code>m</code> for the length of the pattern (here 3). Everything below is about finding the pattern quickly when <code>n</code> is large.</p>
+
+<h2>2. The simple way: check every position</h2>
+<p>The <b>naive</b> (brute-force) method slides the pattern along the text one step at a time. At each step it compares characters left to right and stops at the first mismatch. Try it. You can change the text and pattern; the rest of the page uses them too.</p>
+<div class="card">
+<div class="ctrl"><label>Text <input class="wide" id="inT" value="DAACABCDBA" maxlength="16"></label><label>Pattern <input id="inP" value="CAB" maxlength="6"></label><span class="lbl">Letters A–I only (A=1 … I=9). The reason comes in section 4.</span></div>
+<div class="scroll" id="naiveStrip"></div>
+<div class="ctrl"><button class="alt" id="nPrev">Back</button><button id="nNext">Next step</button><button class="alt" id="nReset">Restart</button></div>
+<div class="say" id="nSay"></div></div>
+<div class="card def"><b class="t">The problem with naive search</b>At every position we may re-compare several characters. In the worst case that is about <code>n × m</code> comparisons. Can we reject most positions with one cheap check instead of many? The example below shows why this matters.</div>
+<h3>What “re-compare” means</h3>
+<p>When a letter doesn’t match, the naive method slides the pattern one step right and starts again from the pattern’s <b>first</b> letter. It forgets everything it just learned about the neighbouring letters, so the same text letters get compared again and again.</p>
+<h3>A bad case, with numbers</h3>
+<p>Text <code>AAAAAAAAAB</code> (n = 10) and pattern <code>AAAAB</code> (m = 5). The pattern keeps almost matching, so every position costs a lot.</p>
+<div class="card"><div class="scroll"><table>
+<tr><th>Position</th><th>Letters compared</th><th>Result</th><th>Comparisons</th></tr>
+<tr><td>0</td><td>A=A, A=A, A=A, A=A, then A≠B</td><td>fail</td><td>5</td></tr>
+<tr><td>1</td><td>A=A, A=A, A=A, A=A, then A≠B</td><td>fail</td><td>5</td></tr>
+<tr><td>2</td><td>A=A, A=A, A=A, A=A, then A≠B</td><td>fail</td><td>5</td></tr>
+<tr><td>3</td><td>A=A, A=A, A=A, A=A, then A≠B</td><td>fail</td><td>5</td></tr>
+<tr><td>4</td><td>A=A, A=A, A=A, A=A, then A≠B</td><td>fail</td><td>5</td></tr>
+<tr><td>5</td><td>A=A, A=A, A=A, A=A, B=B</td><td style="color:var(--ok)">match</td><td>5</td></tr>
+<tr><th colspan="3">Total</th><th>6 × 5 = 30</th></tr>
+</table></div></div>
+<p>There are <code>n − m + 1</code> = 6 positions, and each costs about <code>m</code> = 5 comparisons. That is where “about <code>n × m</code>” comes from. For a text of 1,000,000 letters and a pattern of 1,000 letters, the worst case reaches about a billion comparisons.</p>
+<p>Naive is not always slow. For text <code>HELLO</code> and pattern <code>XYZ</code>, every position fails on the first letter. It only becomes slow when the text keeps almost matching the pattern.</p>
+<h3>The cheap check: one number instead of many letters</h3>
+<p>Turn each window into a number (A=1, B=2, read as digits, as in section 4). Then compare <b>one number</b> instead of up to five letters:</p>
+<div class="card"><div class="scroll"><table>
+<tr><th></th><th>Letters</th><th>As a number</th><th>Same as pattern?</th></tr>
+<tr><td>Pattern</td><td>AAAAB</td><td>11112</td><td></td></tr>
+<tr><td>Window at position 0</td><td>AAAAA</td><td>11111</td><td style="color:var(--bad)">11111 ≠ 11112, reject with 1 comparison</td></tr>
+<tr><td>Window at position 5</td><td>AAAAB</td><td>11112</td><td style="color:var(--ok)">equal, so verify the letters</td></tr>
+</table></div></div>
+<p>Rabin-Karp does exactly this for every window. Only when the two numbers are equal does it compare letters, to confirm the match is real. Most windows are rejected by that single number check, which is why the average cost drops to about <code>n + m</code>. The next sections show how the number is built and updated quickly.</p>
+
+<h2>3. The big idea: compare fingerprints</h2>
+<div class="card def"><b class="t">Definition: hash</b>A <b>hash</b> turns a string into one small number, its fingerprint. The <b>hash value</b> is that number. Mapping a large input to a smaller output is what hashing means.</div>
+<p>Rabin-Karp computes the hash of the pattern once, then the hash of each text window of length <code>m</code>, and compares <b>numbers</b> instead of characters.</p>
+<ul>
+<li><b>Hashes differ</b> → the strings are definitely different. Skip the window.</li>
+<li><b>Hashes equal</b> → the strings <i>might</i> be equal. Check character by character to be sure.</li>
+</ul>
+<p>Why “might”? Many different strings can share the same fingerprint. That is called a <b>collision</b>, and a collision that fools us is a <b>spurious hit</b> (a false alarm). Here is a real one. You can also watch it happen live in section 5.</p>
+<h3>Example of a spurious hit</h3>
+<p>Pattern <code>CAB</code> and a text window <code>DAA</code>. Use A=1, B=2, C=3, D=4, base 10 and modulus q = 11.</p>
+<div class="card"><div class="scroll"><table>
+<tr><th></th><th>Letters</th><th>As digits</th><th>Number</th><th>Number mod 11</th></tr>
+<tr><td>Pattern</td><td>C A B</td><td>3 1 2</td><td>312</td><td>312 = 28×11 + 4, so <b>4</b></td></tr>
+<tr><td>Window</td><td>D A A</td><td>4 1 1</td><td>411</td><td>411 = 37×11 + 4, so <b>4</b></td></tr>
+</table></div></div>
+<div class="say warn"><b>Both hashes are 4.</b> The numbers 312 and 411 are different, and <code>CAB</code> and <code>DAA</code> are clearly different strings, but taking the remainder after dividing by 11 squeezed both onto the same value. That is a <b>collision</b>. Because it fooled the hash check into saying “maybe a match”, it is a <b>spurious hit</b>.</div>
+<p>What Rabin-Karp does next is the important part: it compares the letters. C≠D on the very first letter, so the window is rejected. The answer stays correct, and only a little extra time is lost.</p>
+<p>Compare with a window that is not a collision: <code>ACA</code> = 131, and 131 mod 11 = 10. That is not 4, so the window is skipped immediately with no letter comparison.</p>
+<p><b>How to reduce spurious hits:</b> use a larger prime for q. With q = 101, <code>CAB</code> gives 312 mod 101 = 9 and <code>DAA</code> gives 411 mod 101 = 7. They no longer collide. The trade-off is that the numbers get bigger, but they still fit easily in a program’s integer type.</p>
+
+<h2>4. How we compute the hash</h2>
+<p>We treat letters as digits: <code>A=1, B=2, C=3, D=4 …</code> and read a window as a number. This uses base <code>b = 10</code>, which is why the demo limits letters to A–I. Real programs use a larger base such as 256.</p>
+<div class="eq">hash(window) = (d₁·b<sup>m−1</sup> + d₂·b<sup>m−2</sup> + … + dₘ·b⁰) mod q</div>
+<div class="card def"><b class="t">What is d?</b><code>d</code> is the <b>digit value of a letter</b> in the window, using A=1, B=2, C=3 … The small number underneath says which letter: <code>d₁</code> is the first (leftmost) letter, <code>d₂</code> the second, and <code>dₘ</code> the last (rightmost) letter, where <code>m</code> is the window length. <code>b</code> is the base and <code>q</code> is the modulus.</div>
+<p>Each <code>d</code> is multiplied by a power of <code>b</code>. That power is its <b>place value</b>, just like the digits of an ordinary number: the leftmost letter gets the highest power <code>b<sup>m−1</sup></code> and the rightmost gets <code>b⁰ = 1</code>. Without place values, <code>CAB</code> and <code>ABC</code> would both add up to 3 + 1 + 2 = 6 and look identical. With them, <code>CAB</code> becomes 312 and <code>ABC</code> becomes 123, so the order of letters matters.</p>
+<p>Worked out for the window <code>CAB</code> (m = 3, b = 10):</p>
+<div class="card"><div class="scroll"><table>
+<tr><th>Letter</th><th>C</th><th>A</th><th>B</th></tr>
+<tr><td>Which d</td><td>d₁</td><td>d₂</td><td>d₃</td></tr>
+<tr><td>Value of d</td><td>3</td><td>1</td><td>2</td></tr>
+<tr><td>Multiplied by</td><td>b² = 100</td><td>b¹ = 10</td><td>b⁰ = 1</td></tr>
+<tr><td>Contribution</td><td>300</td><td>10</td><td>2</td></tr>
+</table></div></div>
+<p>Adding gives 300 + 10 + 2 = 312. Taking the remainder with q = 11 gives 312 mod 11 = 4, which is the hash of <code>CAB</code>.</p>
+<p>Example with pattern <code>CAB</code> → digits 3, 1, 2:</p>
+<div class="eq" id="patEq"></div>
+<p>The <code>mod q</code> part keeps numbers small by taking the remainder after dividing by <code>q</code>. Choose <code>q</code> prime so values spread out well and don’t overflow on long patterns.</p>
+<h3>The rolling trick</h3>
+<p>Both the naive method and Rabin-Karp slide the window one letter at a time: the leftmost letter leaves and a new letter enters on the right. The difference is how much work it takes to <b>decide</b> about the new window.</p>
+<div class="card"><div class="scroll"><table>
+<tr><th></th><th>Naive</th><th>Rabin-Karp (rolling)</th></tr>
+<tr><td>After sliding</td><td>Starts a fresh comparison and re-reads the window’s letters one by one, from the first letter</td><td>Does not re-read the middle letters. Fixes the <b>old number</b> using only the letter that left and the letter that arrived</td></tr>
+<tr><td>Work per window</td><td>Up to <code>m</code> comparisons</td><td>A fixed few operations, whatever <code>m</code> is</td></tr>
+<tr><td>Remembers the previous window?</td><td>No</td><td>Yes, through its number</td></tr>
+</table></div></div>
+<p>Computing each window’s number from scratch would again cost <code>m</code> steps per window, no better than naive. Rolling avoids that: remove the leftmost digit, shift everything left, and add the new digit on the right, all in one calculation on the old number.</p>
+<div class="eq">new = ( b · (old − first·b<sup>m−1</sup>) + next ) mod q</div>
+<p>For text <code>DAAC…</code>, window <code>DAA</code> = 411 rolls to <code>AAC</code> = 113. Compare the two ways of getting 113:</p>
+<ul>
+<li><b>From scratch:</b> read A, A, C and compute 1×100 + 1×10 + 3 = 113. That is <code>m</code> = 3 letters read (1000 letters if the pattern were 1000 long).</li>
+<li><b>Rolling:</b> 10 × (411 − 4×100) + 3 = 113. It uses the old number 411, the letter that left (4) and the letter that arrived (3). The middle letters A and A are never touched, however long the pattern is.</li>
+</ul>
+<p>Step by step: take away the 4 (400), leaving 11, shift to 110, add 3. The value <code>b<sup>m−1</sup></code> (here 100) is worked out once at the start and reused for every window.</p>
+
+<h2>5. Watch Rabin-Karp run</h2>
+<p>Same text and pattern as above. Pick <code>q</code>, then step through. With the default text, window 0 (<code>DAA</code>) gives the same hash as the pattern but is a different string. It is a spurious hit, so Rabin-Karp checks the characters and rejects it. A smaller <code>q</code> means more false alarms.</p>
+<div class="card">
+<div class="ctrl"><label>Modulus q <select id="inQ"><option>3</option><option selected>11</option><option>101</option></select></label><span class="mono" id="pH"></span></div>
+<div class="scroll" id="rkStrip"></div>
+<div class="ctrl"><button class="alt" id="rPrev">Back</button><button id="rNext">Next window</button><button class="alt" id="rReset">Restart</button></div>
+<div class="say" id="rSay"></div>
+<div class="scroll"><table id="tbl"></table></div>
+<div class="lbl">Green = true match, amber = hash matched, orange rows = false alarms.</div></div>
+
+<h2>6. The steps in one place</h2>
+<ol>
+<li>Compute the hash of the pattern.</li>
+<li>Compute the hash of the first window of the text (same length as the pattern).</li>
+<li>If the two hashes are equal, compare the characters. If they all match, report the position.</li>
+<li>Slide one step: roll the hash to the next window.</li>
+<li>Repeat steps 3–4 until the window reaches the end of the text.</li>
+</ol>
+<pre>def rabin_karp(text, pat, q=101, b=256):
+    n, m = len(text), len(pat)
+    h = pow(b, m-1, q)            # b^(m-1) mod q
+    hp = ht = 0
+    for i in range(m):            # hash pattern + first window
+        hp = (b*hp + ord(pat[i])) % q
+        ht = (b*ht + ord(text[i])) % q
+    found = []
+    for i in range(n - m + 1):
+        if hp == ht and text[i:i+m] == pat:   # verify!
+            found.append(i)
+        if i &lt; n - m:           # roll to next window
+            ht = (b*(ht - ord(text[i])*h) + ord(text[i+m])) % q
+    return found
+
+print(rabin_karp("AAAABCAEAAABCBDDAAAABC", "AABC"))  # [2, 9, 18]</pre>
+<p>The code above prints matches at positions 2, 9 and 18.</p>
+
+<h2>7. How fast is it?</h2>
+<div class="card"><table id="cmp"></table><div class="lbl">Numbers update with your text and pattern.</div></div>
+<ul>
+<li><b>Average case:</b> about <code>O(n + m)</code>. One pass over the text, a few verifications.</li>
+<li><b>Worst case:</b> <code>O(n × m)</code>. If almost every window collides (for example text <code>AAAAAAAA</code>, pattern <code>AAB</code> with a tiny <code>q</code>), you verify nearly every window.</li>
+<li><b>Superpower:</b> it can search for <b>many patterns at once</b>. Keep their hashes in a set and test each window against it.</li>
+</ul>
+
+<h2>Recap</h2>
+<div class="recap"><ul>
+<li>String matching = find a pattern inside a text.</li>
+<li>Naive checks every position character by character: slow in the worst case.</li>
+<li>Rabin-Karp compares <b>hash numbers</b> first and only checks characters when hashes agree.</li>
+<li>A <b>rolling hash</b> updates each window in one step.</li>
+<li>Equal hashes can be a <b>collision</b>, so always verify before reporting a match.</li>
+</ul></div>
+
+
+<script>
+const V=c=>c.charCodeAt(0)-64,B=10;
+const $=id=>document.getElementById(id);
+function clean(s){return s.toUpperCase().replace(/[^A-I]/g,'')}
+function S(){return{t:clean($('inT').value),p:clean($('inP').value),q:+$('inQ').value}}
+function num(s){return s.split('').reduce((a,c)=>a*B+V(c),0)}
+function strip(el,t,p,off,cls,wlen){
+  let h='<div class="strip">';for(let i=0;i<t.length;i++)h+='<div class="c idx">'+i+'</div>';h+='</div><div class="strip">';
+  for(let i=0;i<t.length;i++){const inW=off>=0&&i>=off&&i<off+wlen;h+='<div class="c '+(inW?cls:'')+'">'+t[i]+'<small>'+V(t[i])+'</small></div>'}
+  h+='</div>';
+  if(p&&off>=0){h+='<div class="strip" style="margin-left:'+(off*35)+'px">';for(let i=0;i<p.length;i++)h+='<div class="c '+cls+'">'+p[i]+'</div>';h+='</div>'}
+  el.innerHTML=h}
+strip($('fig1'),'DAACABCDBA','CAB',3,'ok',3);
+
+let ni=0,nj=0,ri=0;
+function naive(){const {t,p}=S();const n=t.length,m=p.length;
+  if(m==0||m>n){$('naiveStrip').innerHTML='';$('nSay').textContent='Enter a pattern that is not longer than the text.';return}
+  ni=Math.min(ni,n-m);let k=0;while(k<m&&t[ni+k]==p[k])k++;
+  const full=k==m;strip($('naiveStrip'),t,p,ni,full?'ok':'bad',m);
+  $('nSay').className='say '+(full?'ok':'');
+  $('nSay').textContent='Position '+ni+': '+(full?'all '+m+' characters match. Found it!':'compared '+(k+1)+' character'+(k?'s':'')+', mismatch at '+t[ni+k]+' vs '+p[k]+'. Slide on.')}
+function totals(){const {t,p}=S();const n=t.length,m=p.length;let nv=0,hits=0,ver=0;if(!m||m>n)return null;
+  const ph=num(p)%S().q;for(let i=0;i<=n-m;i++){let k=0;while(k<m&&t[i+k]==p[k]){k++;nv++}if(k<m)nv++;
+  if(num(t.substr(i,m))%S().q==ph){hits++;ver+=m;}}return{nv,hits,ver,w:n-m+1}}
+function rk(){const {t,p,q}=S();const n=t.length,m=p.length;
+  if(m==0||m>n){$('rkStrip').innerHTML='';$('rSay').textContent='Enter a pattern that is not longer than the text.';$('tbl').innerHTML='';$('pH').textContent='';$('patEq').textContent='';return}
+  const ph=num(p)%q,pw=Math.pow(B,m-1);
+  $('pH').textContent='pattern hash = '+num(p)+' mod '+q+' = '+ph;
+  $('patEq').textContent=p.split('').map((c,i)=>V(c)+'×'+Math.pow(B,m-1-i)).join(' + ')+' = '+num(p)+'  →  '+num(p)+' mod '+q+' = '+ph;
+  const rows=[];for(let i=0;i<=n-m;i++){const w=t.substr(i,m),raw=num(w),h=raw%q,real=w==p;rows.push({i,w,raw,h,hit:h==ph,real})}
+  ri=Math.min(ri,rows.length-1);const r=rows[ri];
+  strip($('rkStrip'),t,p,ri,r.hit?(r.real?'ok':'warn'):'win',m);
+  let s='Window '+ri+' = “'+r.w+'” → '+r.raw+' mod '+q+' = '+r.h+'. ';
+  if(ri>0){const o=rows[ri-1];s+='Rolled from '+o.raw+': '+B+'×('+o.raw+' − '+V(o.w[0])+'×'+pw+') + '+V(t[ri+m-1])+' = '+r.raw+'. '}
+  let cls='';
+  if(!r.hit)s+='Different from '+ph+', so skip without comparing letters.';
+  else if(r.real){s+='Same as '+ph+'. Check the letters: all match. Real match at '+ri+'!';cls='ok'}
+  else{s+='Same as '+ph+'! Check the letters: they differ. False alarm (collision).';cls='warn'}
+  $('rSay').className='say '+cls;$('rSay').textContent=s;
+  $('tbl').innerHTML='<tr><th>Pos</th><th>Window</th><th>Number</th><th>mod '+q+'</th><th>Result</th></tr>'+rows.map(x=>'<tr'+(x.i==ri?' style="outline:2px solid var(--acc)"':'')+'><td>'+x.i+'</td><td>'+x.w+'</td><td>'+x.raw+'</td><td>'+x.h+'</td><td style="'+(x.hit&&!x.real?'color:var(--warn)':x.real?'color:var(--ok)':'')+'">'+(x.real?'match':x.hit?'false alarm':'skip')+'</td></tr>').join('')}
+function cmp(){const T=totals();if(!T){$('cmp').innerHTML='';return}
+  $('cmp').innerHTML='<tr><th></th><th>Naive</th><th>Rabin-Karp</th></tr><tr><td>Windows looked at</td><td>'+T.w+'</td><td>'+T.w+'</td></tr><tr><td>Character comparisons</td><td>'+T.nv+'</td><td>'+T.ver+' (only on hash hits: '+T.hits+')</td></tr><tr><td>Hash updates</td><td>0</td><td>'+T.w+' (one step each)</td></tr>'}
+function all(){naive();rk();cmp()}
+$('nNext').onclick=()=>{const {t,p}=S();if(ni<t.length-p.length)ni++;naive()};
+$('nPrev').onclick=()=>{ni=Math.max(0,ni-1);naive()};$('nReset').onclick=()=>{ni=0;naive()};
+$('rNext').onclick=()=>{ri++;rk()};$('rPrev').onclick=()=>{ri=Math.max(0,ri-1);rk()};$('rReset').onclick=()=>{ri=0;rk()};
+['inT','inP'].forEach(id=>$(id).oninput=e=>{e.target.value=clean(e.target.value);ni=ri=0;all()});
+$('inQ').onchange=()=>{ri=0;all()};
+all();
+</script>
+</main></body></html>
